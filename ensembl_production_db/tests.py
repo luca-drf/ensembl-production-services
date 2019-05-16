@@ -12,11 +12,11 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 """
-import json
 
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+
 from ensembl_production_db.models import *
 
 
@@ -54,6 +54,7 @@ class AnalysisTest(APITestCase):
         response = self.client.post(reverse('analysisdescription-list'), data=json.dumps(valid_payload),
                                     content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        testwebdata2 = AnalysisDescription.objects.filter(logic_name="testwebtestdata2").first()
         # Test bad post
         response = self.client.post(reverse('analysisdescription-list'),
                                     {'logic_name': '', 'description': 'test analysis', 'display_label': 'test',
@@ -93,6 +94,7 @@ class AnalysisTest(APITestCase):
                          'web_data': {'description': 'test2', 'data': {'default': {'contigviewbottom': 'notnormal'},
                                                                        'dna_align_feature': {'do_not_display': '1'},
                                                                        'type': 'cdna'}}}
+
         response = self.client.put(reverse('analysisdescription-detail', kwargs={'logic_name': 'dontexistwebdata'}),
                                    data=json.dumps(valid_payload), content_type='application/json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -148,6 +150,31 @@ class AnalysisTest(APITestCase):
         # Test bad delete
         response = self.client.delete(reverse('analysisdescription-detail', kwargs={'logic_name': 'cantdeleteit'}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        valid_payload = {
+            "web_data": {
+                "colour_key": "bam",
+                "data": {
+                    "zmenu": "RNASeq_bam",
+                    "label_key": "RNASeq [biotype]",
+                    "type": "rnaseq",
+                    "matrix": {
+                        "group_order": "1",
+                        "column": "BAM files",
+                        "menu": "rnaseq",
+                        "group": "ENA",
+                        "row": "weak electric organ"
+                    }
+                }
+            },
+            "logic_name": "electrophorus_electricus_weak_electric_organ_rnaseq_bam",
+            "description": "BWA alignments of weak electric organ RNA-seq data. This BAM file can be downloaded from the <a href=\"ftp://ftp.ensembl.org/pub/data_files/\">Ensembl FTP site</a>\"",
+            "display_label": "weak electric organ RNA-seq BWA alignments"
+        }
+        response = self.client.post(reverse('analysisdescription-list'), data=json.dumps(valid_payload),
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        testwebdata2 = AnalysisDescription.objects.filter(logic_name="electrophorus_electricus_weak_electric_organ_rnaseq_bam").first()
 
     # Test attrib Type endpoint
     def test_AttribType(self):

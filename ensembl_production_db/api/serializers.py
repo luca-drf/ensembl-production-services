@@ -53,7 +53,7 @@ class PerlFieldElementSerializer(serializers.CharField):
 class WebDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = WebData
-        exclude = ('web_data', )
+        exclude = ('web_data', 'created_by', 'modified_by')
 
     data = PerlFieldElementSerializer(source="web_data")
 
@@ -110,7 +110,7 @@ class AnalysisDescriptionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AnalysisDescription
-        exclude = ('created_at', 'created_by')
+        exclude = ('created_at', 'created_by', 'modified_by')
 
     web_data = WebDataSerializer(many=False, required=False)
 
