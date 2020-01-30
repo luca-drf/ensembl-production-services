@@ -27,7 +27,7 @@ def read_env():
     """
     config = configparser.ConfigParser()
     config.optionxform = str
-    config.read('./.env')
+    config.read(os.path.join(os.path.dirname(__file__), '.env'))
     section = os.environ.get("DJANGO_ENV", "DEFAULT")
 
     for var, value in config[section].items():
