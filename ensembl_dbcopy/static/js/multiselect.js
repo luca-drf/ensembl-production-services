@@ -7,6 +7,15 @@ var DBNames = [];
 
 var TableNames = [];
 
+// Validate host details obj
+function validHostDetails(hostDetails) {
+  let name = hostDetails.name
+  let port = hostDetails.port
+  let validName = typeof(name) == 'string' && name !== ''
+  let validPort = !isNaN(port) && port !== ''
+  return validName && validPort
+}
+
 // Split a string according to a delimiter
 function split(val) {
     return val.replace(/\s*/, "").replace(/,$/, "").split(",");
@@ -71,23 +80,25 @@ function fetchPresentDBNames(hostsDetails, matchesDBs, thenFunc) {
   let presentDBs = [];
   let asyncCalls = [];
   $(hostsDetails).each(function (_i, hostDetails) {
-    asyncCalls.push(
-      $.ajax({
-        url: `/api/dbcopy/databases/${hostDetails.name}/${hostDetails.port}`,
-        dataType: "json",
-        data: {
-            matches: matchesDBs,
-        },
-        success: function (data) {
-          const hostString = hostDetailsToString(hostDetails);
-          data.forEach(function (dbName) {
-            presentDBs.push(hostString + "/" + dbName);
-          });
-        },
-        error: function (_request, _textStatus, _error) {
-        }
-      })
-    );
+    if (validHostDetails(hostDetails)) {
+      asyncCalls.push(
+        $.ajax({
+          url: `/api/dbcopy/databases/${hostDetails.name}/${hostDetails.port}`,
+          dataType: "json",
+          data: {
+              matches: matchesDBs,
+          },
+          success: function (data) {
+            const hostString = hostDetailsToString(hostDetails);
+            data.forEach(function (dbName) {
+              presentDBs.push(hostString + "/" + dbName);
+            });
+          }
+          // error: function (_request, _textStatus, _error) {
+          // }
+        })
+      );
+    }
   });
   $.when.apply($, asyncCalls).then(function () {
     thenFunc(presentDBs);
@@ -96,26 +107,31 @@ function fetchPresentDBNames(hostsDetails, matchesDBs, thenFunc) {
 
 // Fetch Databases per server
 function fetchPresentTableNames(hostDetails, databaseName, matchesTables, thenFunc) {
-  $.ajax({
-    url: `/api/dbcopy/tables/${hostDetails.name}/${hostDetails.port}/${databaseName}`,
-    dataType: "json",
-    data: {
-        matches: matchesTables,
-    },
-    success: function (data) {
-        thenFunc($.makeArray(data));
-    },
-    error: function (_request, _textStatus, _error) {
-        thenFunc([]);
-    }
-  });
+  if (validHostDetails(hostDetails)) {
+    $.ajax({
+      url: `/api/dbcopy/tables/${hostDetails.name}/${hostDetails.port}/${databaseName}`,
+      dataType: "json",
+      data: {
+          matches: matchesTables,
+      },
+      success: function (data) {
+          thenFunc($.makeArray(data));
+      },
+      error: function (_request, _textStatus, _error) {
+          thenFunc([]);
+      }
+    });
+  }
+  else {
+    thenFunc([]);
+  }
 }
 
 function checkDBNames(dbNames, hostDetails, thenFunc) {
   if (dbNames.length && dbNames.length > 1) {
     thenFunc(dbNames);
   }
-  else {
+  else if (validHostDetails(hostDetails)) {
     $.ajax({
       url: `/api/dbcopy/databases/${hostDetails.name}/${hostDetails.port}`,
       dataType: "json",
@@ -130,13 +146,16 @@ function checkDBNames(dbNames, hostDetails, thenFunc) {
       }
     });
   }
+  else {
+    thenFunc([]);
+  }
 }
 
 function checkTableNames(tableNames, hostDetails, databaseName, thenFunc) {
   if (tableNames.length) {
     thenFunc(tableNames);
   }
-  else {
+  else if (validHostDetails(hostDetails)) {
     $.ajax({
       url: `/api/dbcopy/tables/${hostDetails.name}/${hostDetails.port}/${databaseName}`,
       dataType: "json",
@@ -147,6 +166,9 @@ function checkTableNames(tableNames, hostDetails, databaseName, thenFunc) {
         thenFunc([]);
       }
     });
+  }
+  else {
+    thenFunc([]);
   }
 }
 
@@ -384,6 +406,7 @@ $(function () {
 $(function () {
     $("#id_src_incl_db").autocomplete({
         source: function (request, response) {
+          if (validHostDetails(SrcHostDetails)) {
             $.ajax({
                 url: `/api/dbcopy/databases/${SrcHostDetails.name}/${SrcHostDetails.port}`,
                 dataType: "json",
@@ -397,6 +420,10 @@ $(function () {
                   response([]);
                 }
             });
+          }
+          else {
+            response([]);
+          }
         },
         minLength: 1,
         focus: function () {
@@ -418,6 +445,7 @@ $(function () {
 $(function () {
     $("#id_src_skip_db").autocomplete({
         source: function (request, response) {
+          if (validHostDetails(SrcHostDetails)) {
             $.ajax({
                 url: `/api/dbcopy/databases/${SrcHostDetails.name}/${SrcHostDetails.port}`,
                 dataType: "json",
@@ -431,6 +459,10 @@ $(function () {
                   response([]);
                 }
             });
+          }
+          else {
+            response([]);
+          }
         },
         minLength: 1,
         focus: function () {
@@ -451,7 +483,7 @@ $(function () {
     $("#id_src_incl_tables").autocomplete({
         source: function (request, response) {
             const srcDBs = getSplitNames("#id_src_incl_db");
-            if (srcDBs.length) {
+            if (validHostDetails(SrcHostDetails) && srcDBs.length) {
                 $.ajax({
                     url: `/api/dbcopy/tables/${SrcHostDetails.name}/${SrcHostDetails.port}/${srcDBs[0]}`,
                     dataType: "json",
@@ -492,7 +524,7 @@ $(function () {
     $("#id_src_skip_tables").autocomplete({
         source: function (request, response) {
             const srcDBs = getSplitNames("#id_src_incl_db");
-            if (srcDBs.length) {
+            if (validHostDetails(SrcHostDetails) && srcDBs.length) {
                 $.ajax({
                     url: `/api/dbcopy/tables/${SrcHostDetails.name}/${SrcHostDetails.port}/${srcDBs[0]}`,
                     dataType: "json",
